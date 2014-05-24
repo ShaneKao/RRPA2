@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+<title>The Weather Events Analysis</title>
+
+
+
+
+
+<style type="text/css">
+body, td {
+   font-family: sans-serif;
+   background-color: white;
+   font-size: 13px;
+}
+
+body {
+  max-width: 800px;
+  margin: auto;
+  line-height: 20px;
+}
+
+tt, code, pre {
+   font-family: 'DejaVu Sans Mono', 'Droid Sans Mono', 'Lucida Console', Consolas, Monaco, monospace;
+}
+
+h1 { 
+   font-size:2.2em; 
+}
+
+h2 { 
+   font-size:1.8em; 
+}
+
+h3 { 
+   font-size:1.4em; 
+}
+
+h4 { 
+   font-size:1.0em; 
+}
+
+h5 { 
+   font-size:0.9em; 
+}
+
+h6 { 
+   font-size:0.8em; 
+}
+
+a:visited {
+   color: rgb(50%, 0%, 50%);
+}
+
+pre, img {
+  max-width: 100%;
+}
+
+pre code {
+   display: block; padding: 0.5em;
+}
+
+code {
+  font-size: 92%;
+  border: 1px solid #ccc;
+}
+
+code[class] {
+  background-color: #F8F8F8;
+}
+
+table, td, th {
+  border: none;
+}
+
+blockquote {
+   color:#666666;
+   margin:0;
+   padding-left: 1em;
+   border-left: 0.5em #EEE solid;
+}
+
+hr {
+   height: 0px;
+   border-bottom: none;
+   border-top-width: thin;
+   border-top-style: dotted;
+   border-top-color: #999999;
+}
+
+@media print {
+   * { 
+      background: transparent !important; 
+      color: black !important; 
+      filter:none !important; 
+      -ms-filter: none !important; 
+   }
+
+   body { 
+      font-size:12pt; 
+      max-width:100%; 
+   }
+       
+   a, a:visited { 
+      text-decoration: underline; 
+   }
+
+   hr { 
+      visibility: hidden;
+      page-break-before: always;
+   }
+
+   pre, blockquote { 
+      padding-right: 1em; 
+      page-break-inside: avoid; 
+   }
+
+   tr, img { 
+      page-break-inside: avoid; 
+   }
+
+   img { 
+      max-width: 100% !important; 
+   }
+
+   @page :left { 
+      margin: 15mm 20mm 15mm 10mm; 
+   }
+     
+   @page :right { 
+      margin: 15mm 10mm 15mm 20mm; 
+   }
+
+   p, h2, h3 { 
+      orphans: 3; widows: 3; 
+   }
+
+   h2, h3 { 
+      page-break-after: avoid; 
+   }
+}
+</style>
+
+
+
+</head>
+
+<body>
+<h1>The Weather Events Analysis</h1>
+
+<p>This project try to answer two questions:</p>
+
+<ul>
+<li>Across the United States, which types of events (as indicated in the <code>EVTYPE</code> variable) are most harmful with respect to population health?</li>
+<li>Across the United States, which types of events have the greatest economic consequences?</li>
+</ul>
+
+<p>The other detail about the project can be found on Coursera website.</p>
+
+<h1>Data Processing</h1>
+
+<p>The raw data can&#39;t be read into R completly, the <code>REMARK</code> variable is too big to cotains in one column, so, I 
+just read a part of row. I load just 7 variable which is <code>EVTYPE</code>,<code>FATALITIES</code>,<code>INJURIES</code>,<code>PROPDMG</code>,<code>PROPDMGEXP</code>,<code>CROPDMG</code> and <code>CROPDMGEXP</code>  </p>
+
+<pre><code class="r">StormData = read.csv(&quot;repdata-data-StormData.csv&quot;, sep = &quot;,&quot;, header = TRUE, 
+    stringsAsFactors = FALSE, nrows = 547362, colClasses = c(rep(&quot;NULL&quot;, 7), 
+        &quot;character&quot;, rep(&quot;NULL&quot;, 14), rep(&quot;numeric&quot;, 2), rep(c(&quot;numeric&quot;, &quot;character&quot;), 
+            2), rep(&quot;NULL&quot;, 9)))
+head(StormData)
+</code></pre>
+
+<pre><code>##    EVTYPE FATALITIES INJURIES PROPDMG PROPDMGEXP CROPDMG CROPDMGEXP
+## 1 TORNADO          0       15    25.0          K       0           
+## 2 TORNADO          0        0     2.5          K       0           
+## 3 TORNADO          0        2    25.0          K       0           
+## 4 TORNADO          0        2     2.5          K       0           
+## 5 TORNADO          0        2     2.5          K       0           
+## 6 TORNADO          0        6     2.5          K       0
+</code></pre>
+
+<p>Now, I will show you how I clean the data to be ready for data analysis, fist of all, I transfer the following three variables to capital letter.</p>
+
+<pre><code class="r">
+StormData$EVTYPE = toupper(StormData$EVTYPE)
+StormData$PROPDMGEXP = toupper(StormData$PROPDMGEXP)
+StormData$CROPDMGEXP = toupper(StormData$CROPDMGEXP)
+</code></pre>
+
+<p>The reduce data is named <code>StormDataV1</code> that remove the meanningless symbol in variabe <code>PROPDMGEXP</code> and <code>CROPDMGEXP</code> like `<code>,</code>+<code>,</code>-<code>and</code>?`. </p>
+
+<pre><code class="r">
+index = !(StormData$CROPDMGEXP == &quot;?&quot; | StormData$CROPDMGEXP == &quot;&quot; | StormData$PROPDMGEXP == 
+    &quot;?&quot; | StormData$PROPDMGEXP == &quot;&quot; | StormData$PROPDMGEXP == &quot;-&quot; | StormData$PROPDMGEXP == 
+    &quot;+&quot;)
+StormDataV1 = StormData[index, ]
+</code></pre>
+
+<p>Change variabe <code>PROPDMGEXP</code> and <code>CROPDMGEXP</code> to numeric class which unit is USD.</p>
+
+<pre><code class="r">StormDataV1$PROPDMGEXP = ifelse(StormDataV1$PROPDMGEXP == &quot;K&quot;, 1000, ifelse(StormDataV1$PROPDMGEXP == 
+    &quot;M&quot;, 1e+06, ifelse(StormDataV1$PROPDMGEXP == &quot;B&quot;, 10^9, ifelse(StormDataV1$PROPDMGEXP == 
+    0, 1, ifelse(StormDataV1$PROPDMGEXP == 3, 10, 10^5)))))
+StormDataV1$CROPDMGEXP = ifelse(StormDataV1$PROPDMGEXP == &quot;K&quot;, 1000, ifelse(StormDataV1$PROPDMGEXP == 
+    &quot;M&quot;, 1e+06, ifelse(StormDataV1$PROPDMGEXP == &quot;B&quot;, 10^9, 1)))
+</code></pre>
+
+<p>There are numbers of different types of weather events, so, what I do next is to group it to 8 groups. The detail shows at the following code.</p>
+
+<pre><code class="r">tornado.index = grep(&quot;TORNADO|GUSTNADO|WATERSPOUT&quot;, StormDataV1$EVTYPE, ignore.case = TRUE)
+tonado.class = unique((StormDataV1$EVTYPE)[tornado.index])
+storm.index = grep(&quot;STORM|TYPHOON|HURRICANE|LIGHT&quot;, (StormDataV1$EVTYPE)[-tornado.index], 
+    ignore.case = TRUE)
+storm.class = unique(((StormDataV1$EVTYPE)[-tornado.index])[storm.index])
+wind.index = grep(&quot;WIND&quot;, ((StormDataV1$EVTYPE)[-tornado.index])[-storm.index], 
+    ignore.case = TRUE)
+wind.class = unique((((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[wind.index])
+flood.index = grep(&quot;FLOOD|RAIN|FLD&quot;, (((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[-wind.index], 
+    ignore.case = TRUE)
+flood.class = unique(((((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[-wind.index])[flood.index])
+hail.index = grep(&quot;HAIL&quot;, ((((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[-wind.index])[-flood.index], 
+    ignore.case = TRUE)
+hail.class = unique((((((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[-wind.index])[-flood.index])[hail.index])
+heat.index = grep(&quot;HEAT|FIRE|DRY|DROUGHT&quot;, (((((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[-wind.index])[-flood.index])[-hail.index], 
+    ignore.case = TRUE)
+heat.class = unique(((((((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[-wind.index])[-flood.index])[-hail.index])[heat.index])
+snow.index = grep(&quot;SNOW|BLIZZARD|COLD|FREEZE|ICE|ICY&quot;, ((((((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[-wind.index])[-flood.index])[-hail.index])[-heat.index], 
+    ignore.case = TRUE)
+snow.class = unique((((((((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[-wind.index])[-flood.index])[-hail.index])[-heat.index])[snow.index])
+other.class = unique((((((((StormDataV1$EVTYPE)[-tornado.index])[-storm.index])[-wind.index])[-flood.index])[-hail.index])[-heat.index])[-snow.index])
+</code></pre>
+
+<p>The clean data set <code>CleanData</code> has five variable, <code>EVGROUP</code> is available at previous step, <code>PropDmg</code> and <code>CropDmg</code> are simply <code>PROPDMG</code> times <code>PROPDMGEXP</code> and <code>CROPDMG</code> times <code>CROPDMGEXP</code>, <code>FATALITIES</code> and <code>INJURIES</code> are same as <code>StormDataV1</code> </p>
+
+<pre><code class="r">EVGROUP = ifelse(StormDataV1$EVTYPE %in% tonado.class, &quot;TORNADO&quot;, ifelse(StormDataV1$EVTYPE %in% 
+    storm.class, &quot;STORM&quot;, ifelse(StormDataV1$EVTYPE %in% wind.class, &quot;WIND&quot;, 
+    ifelse(StormDataV1$EVTYPE %in% flood.class, &quot;FLOOD&quot;, ifelse(StormDataV1$EVTYPE %in% 
+        hail.class, &quot;HAIL&quot;, ifelse(StormDataV1$EVTYPE %in% heat.class, &quot;HEAT&quot;, 
+        ifelse(StormDataV1$EVTYPE %in% snow.class, &quot;SNOW&quot;, &quot;OTHER&quot;)))))))
+FATALITIES = StormDataV1$FATALITIES
+INJURIES = StormDataV1$INJURIES
+PropDmg = StormDataV1$PROPDMG * StormDataV1$PROPDMGEXP
+CropDmg = StormDataV1$CROPDMG * StormDataV1$CROPDMGEXP
+CleanData = data.frame(EVGROUP, FATALITIES, INJURIES, PropDmg, CropDmg)
+</code></pre>
+
+<pre><code class="r">head(CleanData)
+</code></pre>
+
+<pre><code>##   EVGROUP FATALITIES INJURIES PropDmg CropDmg
+## 1   STORM          2        0 1.0e+08      10
+## 2   STORM          0        0 5.0e+06     500
+## 3   STORM          0        0 2.5e+07       1
+## 4   STORM          0        0 4.8e+07       4
+## 5   STORM          0        0 2.0e+06      10
+## 6   STORM          0        0 5.0e+04      50
+</code></pre>
+
+<h1>Method</h1>
+
+<p>The function <code>fatal.rate</code> and <code>injury.rate</code>  indicate the influence of population health. The rate is defined as <strong>the percentage of the specific weather event causes  at least one died or injury</strong>. </p>
+
+<pre><code class="r">
+fatal.rate = function(x) {
+    sub.data = CleanData[CleanData[, 1] == x, ]
+    sum(sub.data[, 2] &gt; 0)/length(sub.data[, 2])
+}
+injury.rate = function(x) {
+    sub.data = CleanData[CleanData[, 1] == x, ]
+    sum(sub.data[, 3] &gt; 0)/length(sub.data[, 3])
+}
+</code></pre>
+
+<p>The function <code>prop.dmg</code>, <code>crop.dmg</code> and <code>total.dmg</code>  indicate <strong>the 
+average of property damage, crop damage and total damage for specific weather event</strong>.</p>
+
+<pre><code class="r">
+prop.dmg = function(x) {
+    mean(CleanData[CleanData[, 1] == x, 4])
+}
+crop.dmg = function(x) {
+    mean(CleanData[CleanData[, 1] == x, 5])
+}
+total.dmg = function(x) {
+    mean(CleanData[CleanData[, 1] == x, 5] + CleanData[CleanData[, 1] == x, 
+        4])
+}
+</code></pre>
+
+<h1>Results</h1>
+
+<p>We can get the numeric result in the following two tables. </p>
+
+<pre><code class="r">
+FatalRate = apply(cbind(c(&quot;TORNADO&quot;, &quot;STORM&quot;, &quot;WIND&quot;, &quot;FLOOD&quot;, &quot;HAIL&quot;, &quot;HEAT&quot;, 
+    &quot;SNOW&quot;, &quot;OTHER&quot;)), 1, fatal.rate)
+InjuryRate = apply(cbind(c(&quot;TORNADO&quot;, &quot;STORM&quot;, &quot;WIND&quot;, &quot;FLOOD&quot;, &quot;HAIL&quot;, &quot;HEAT&quot;, 
+    &quot;SNOW&quot;, &quot;OTHER&quot;)), 1, injury.rate)
+health.table = as.data.frame(rbind(FatalRate, InjuryRate))
+colnames(health.table) = c(&quot;TORNADO&quot;, &quot;STORM&quot;, &quot;WIND&quot;, &quot;FLOOD&quot;, &quot;HAIL&quot;, &quot;HEAT&quot;, 
+    &quot;SNOW&quot;, &quot;OTHER&quot;)
+health.table
+</code></pre>
+
+<pre><code>##            TORNADO   STORM     WIND   FLOOD     HAIL    HEAT    SNOW
+## FatalRate  0.04035 0.04098 0.005233 0.03256 0.000000 0.03663 0.04972
+## InjuryRate 0.15658 0.08197 0.027132 0.03063 0.004191 0.04762 0.06077
+##               OTHER
+## FatalRate  0.000000
+## InjuryRate 0.008696
+</code></pre>
+
+<pre><code class="r">
+PropertyDamage = apply(cbind(c(&quot;TORNADO&quot;, &quot;STORM&quot;, &quot;WIND&quot;, &quot;FLOOD&quot;, &quot;HAIL&quot;, 
+    &quot;HEAT&quot;, &quot;SNOW&quot;, &quot;OTHER&quot;)), 1, prop.dmg)
+CropDamage = apply(cbind(c(&quot;TORNADO&quot;, &quot;STORM&quot;, &quot;WIND&quot;, &quot;FLOOD&quot;, &quot;HAIL&quot;, &quot;HEAT&quot;, 
+    &quot;SNOW&quot;, &quot;OTHER&quot;)), 1, crop.dmg)
+TotalDamage = apply(cbind(c(&quot;TORNADO&quot;, &quot;STORM&quot;, &quot;WIND&quot;, &quot;FLOOD&quot;, &quot;HAIL&quot;, &quot;HEAT&quot;, 
+    &quot;SNOW&quot;, &quot;OTHER&quot;)), 1, total.dmg)
+damage.table = as.data.frame(rbind(PropertyDamage, CropDamage, TotalDamage))
+colnames(damage.table) = c(&quot;TORNADO&quot;, &quot;STORM&quot;, &quot;WIND&quot;, &quot;FLOOD&quot;, &quot;HAIL&quot;, &quot;HEAT&quot;, 
+    &quot;SNOW&quot;, &quot;OTHER&quot;)
+damage.table
+</code></pre>
+
+<pre><code>##                  TORNADO     STORM      WIND     FLOOD      HAIL      HEAT
+## PropertyDamage 2.768e+06 2.238e+07 407847.82 3.350e+06 162961.07 5.443e+06
+## CropDamage     3.321e+01 2.489e+01     18.67 4.848e+01     35.97 1.687e+01
+## TotalDamage    2.768e+06 2.238e+07 407866.50 3.350e+06 162997.04 5.443e+06
+##                     SNOW OTHER
+## PropertyDamage 935853.04 278.3
+## CropDamage         18.16   0.0
+## TotalDamage    935871.20 278.3
+</code></pre>
+
+<p>The following figure combines the information of population health and economic consequences, <strong>the size of text represent the degree of total damage</strong>.</p>
+
+<pre><code class="r">
+text.size = as.numeric(3 - (22392249 - damage.table[3, ])/8956780)
+plot(FatalRate, InjuryRate, type = &quot;n&quot;)
+text(FatalRate, InjuryRate, c(&quot;TORNADO&quot;, &quot;STORM&quot;, &quot;WIND&quot;, &quot;FLOOD&quot;, &quot;HAIL&quot;, &quot;HEAT&quot;, 
+    &quot;SNOW&quot;, &quot;OTHER&quot;), cex = text.size, col = 2)
+text(0.01, 0.15, &quot;Bigger size, Higher total damage&quot;)
+text(0.01, 0.125, &quot;Smaller size, Lower total damage&quot;)
+</code></pre>
+
+<p><img src="figure/unnamed-chunk-12.png" alt="plot of chunk unnamed-chunk-12"> </p>
+
+<p>Finally, we answer the original two questions</p>
+
+<ul>
+<li><strong>TORNADO is most harmful with respect to population health because the figure shows high fatal rate and high injury rate.</strong></li>
+<li><strong>STORM have the greatest economic consequences because the text size is biggest.</strong></li>
+</ul>
+
+</body>
+
+</html>
